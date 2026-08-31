@@ -85,6 +85,7 @@ header .sub{font-size:12.5px;color:var(--dim)}
 
 .chips{display:flex;gap:7px;overflow-x:auto;padding:2px 0 9px;scrollbar-width:none}
 .chips::-webkit-scrollbar{display:none}
+.chips.wrap{flex-wrap:wrap;overflow-x:visible}
 .chip{flex:none;padding:6px 12px;border-radius:999px;border:1px solid var(--line);font-size:14px;
   color:var(--dim);white-space:nowrap;font-weight:500}
 .chip.on{background:var(--chalk);color:var(--iron);border-color:var(--chalk)}
@@ -97,7 +98,8 @@ header .sub{font-size:12.5px;color:var(--dim)}
   border-radius:10px;padding:11px 12px;margin-bottom:8px}
 .charge-row.edit{border-color:var(--gold);background:var(--gold-soft)}
 .charge-row .cr-charge{font-size:19px;font-weight:700;color:var(--gold);line-height:1.2}
-.charge-row.carry .cr-charge{color:var(--steel)}
+/* or = une charge soulevée ; acier = une mesure qui n'est pas un poids */
+.charge-row.mesure .cr-charge{color:var(--steel)}
 .charge-row .cr-detail{font-size:12.5px;color:var(--dim);margin-top:2px}
 .charge-row .x{color:var(--dim-2);font-size:21px;padding:0 4px;flex:none;line-height:1}
 .charge-row .pen{color:var(--dim-2);font-size:15px;padding:0 3px;flex:none;line-height:1}
@@ -212,6 +214,21 @@ ul.tech li{margin-bottom:6px}
 .grp-head{display:flex;align-items:baseline;justify-content:space-between;gap:10px;
   margin:16px 0 8px;width:100%;text-align:left}
 .grp-head .cnt{font-family:'Barlow Condensed';font-size:12px;font-weight:600;color:var(--dim-2);flex:none}
+
+/* ── Bandeau de date : rappelle en permanence sur quelle séance on écrit ── */
+.datebar{display:flex;align-items:center;gap:11px;background:var(--gold-soft);
+  border:1px solid var(--gold);border-left-width:3px;border-radius:12px;
+  padding:11px 12px;margin-bottom:11px}
+.datebar strong{font-family:'Barlow Condensed';font-size:16.5px;font-weight:700;
+  color:var(--gold);display:block;line-height:1.2}
+.datebar .tiny{margin-top:2px}
+.datebar button{flex:none;font-family:'Barlow Condensed';font-weight:700;font-size:13px;
+  letter-spacing:.05em;text-transform:uppercase;color:var(--chalk);background:var(--gold);
+  padding:8px 12px;border-radius:9px;white-space:nowrap}
+.datepick{display:flex;flex-direction:column;gap:3px}
+.datepick input{width:auto;padding:8px 11px;font-size:14px}
+.deplacer{background:var(--iron-2);border:1px solid var(--line);border-radius:12px;
+  padding:12px;margin-bottom:12px}
 
 @media (prefers-reduced-motion:reduce){*{transition:none!important;animation:none!important}}
 </style>
@@ -973,7 +990,7 @@ const EXOS = [
 
 /* ── CARDIO ──────────────────────────────── */
 {id:'tapis', pic:'tapis', g:'cardio', muscle:'complet', nom:'Course sur tapis', type:'cardio', unite:'km/h', charge:10, pas:0.5,
- machine:['pente','dist','vmoy','deniv','kcal'],
+ machine:['pente','distkm','vmoy','deniv','kcal'],
  cible:'20–40 min', muscles:'Système cardio-respiratoire · jambes · tronc',
  tech:['Regard devant, buste droit, épaules relâchées.',
        'Foulée naturelle : ne cherche pas à allonger artificiellement le pas.',
@@ -982,7 +999,7 @@ const EXOS = [
  note:'La charge sert ici à noter la vitesse en km/h, et la durée se saisit en minutes. Le tonnage ne compte pas le cardio.'},
 
 {id:'velo', pic:'velo', g:'cardio', muscle:'jambes', nom:'Vélo / Assault Bike', type:'cardio', unite:'niveau', charge:6, pas:1,
- machine:['dist','vmoy','kcal'],
+ machine:['distkm','vmoy','kcal'],
  cible:'15–30 min', muscles:'Quadriceps · fessiers · système cardio-respiratoire',
  tech:['Selle réglée pour que la jambe reste très légèrement fléchie en bas de course.',
        'Pédalage rond et régulier plutôt que par à-coups.',
@@ -998,7 +1015,7 @@ const EXOS = [
  note:'Excellent complément aux jambes sans charge axiale sur la colonne.'},
 
 {id:'sprint', pic:'sprint', g:'cardio', muscle:'complet', nom:'Sprint / fractionné', type:'cardio', unite:'km/h', charge:14, pas:0.5,
- machine:['pente','dist','vmoy','kcal'],
+ machine:['pente','distkm','vmoy','kcal'],
  cible:'8–12 × 30 s', muscles:'Ischio-jambiers · fessiers · système cardio-respiratoire',
  tech:['Échauffement complet obligatoire avant toute accélération.',
        'Monte progressivement en intensité sur les premières répétitions.',
@@ -1006,7 +1023,7 @@ const EXOS = [
  note:'Note ici la vitesse de pointe et la durée cumulée d’effort. Séries = nombre de sprints.'},
 
 {id:'norvegien', pic:'sprint', g:'cardio', muscle:'complet', nom:'Fractionné norvégien (4×4)', type:'fractionne', unite:'min', charge:10, pas:1,
- machine:['pente','dist','vmoy','deniv','kcal'],
+ machine:['pente','distkm','vmoy','deniv','kcal'],
  cible:'4 × 4 min à 85–95 % FCmax', muscles:'Système cardio-respiratoire · jambes · VO2max',
  tech:['Échauffement progressif jusqu’à l’allure de travail, jamais un départ à froid.',
        'Chaque montée se tient à une intensité dure mais soutenable sur toute sa durée — pas un sprint qui explose à mi-parcours.',
@@ -1061,43 +1078,137 @@ const KEY = 'carnet-fonte-v2';
 let S = {jours:{}, perso:[], picsPerso:{}, favoris:[], modeles:[], terminees:[]};
 let UI = {vue:'exos', date:null, ouvert:{}, exCharge:null, stock:true, filtre:'tous', axe:'type', _y:0,
           saisie:{}, edit:null, q:'', replie:{}, corbeille:null, _vuePrec:null,
-          panneau:{}, editDate:null};
+          panneau:{}, editDate:null, pret:false};
 
-const MATLABEL = {haltere:'Haltère', disque:'Disque', kettlebell:'Kettlebell', barre:'Barre'};
+const MATLABEL = {barre:'Barre', disque:'Disque', kettlebell:'Kettlebell', haltere:'Haltère',
+                  sac:'Sandbag', pdc:'Poids du corps'};
+const MATS = Object.keys(MATLABEL);
 
 /* Mesures relevées sur les machines cardio. Chaque exercice déclare
-   celles qu'il produit via son champ `machine`. */
+   celles qu'il produit via son champ `machine`. Elles s'ajoutent aux
+   variables universelles, elles ne les remplacent pas. */
 const MESURES = {
-  pente: {lab:'Pente · %',      col:'Pente (%)',        pas:0.5, live:true},
-  dist:  {lab:'Distance · km',  col:'Distance (km)',    pas:0.1},
-  vmoy:  {lab:'V. moy · km/h',  col:'V. moy (km/h)',    pas:0.1},
-  deniv: {lab:'Dénivelé · m',   col:'Dénivelé (m)',     pas:5},
-  kcal:  {lab:'Calories',       col:'Calories',         pas:10}
+  pente: {lab:'Pente · %',      col:'Pente (%)',              pas:0.5, live:true},
+  distkm:{lab:'Dist. machine · km', col:'Distance machine (km)', pas:0.1},
+  vmoy:  {lab:'V. moy · km/h',  col:'V. moy (km/h)',          pas:0.1},
+  deniv: {lab:'Dénivelé · m',   col:'Dénivelé (m)',           pas:5},
+  kcal:  {lab:'Calories',       col:'Calories',               pas:10}
 };
 const CLES_MESURES = Object.keys(MESURES);
+const UNI_MES = {pente:' %', distkm:' km', vmoy:' km/h', deniv:' m D+', kcal:' kcal'};
+
+/* ── LES VARIABLES UNIVERSELLES ────────────────────────────
+   Proposées sur TOUS les exercices, quelle que soit leur catégorie.
+   Un exercice ne restreint plus rien : il ne fait que suggérer un pas
+   de réglage et mettre en avant les champs qui le concernent le plus.
+   Rien n'empêche de noter une distance sur un squat ou des reps sur
+   un porté — c'est exactement ce qu'on veut pouvoir faire. */
+const CHAMPS = {
+  series: {lab:'Séries',        pas:1,   court:'série',    plur:'séries'},
+  reps:   {lab:'Reps',          pas:1,   court:'rep',      plur:'reps'},
+  charge: {lab:'Charge',        pas:2.5, court:'charge',   plur:'charge'},
+  dist:   {lab:'Distance · m',  pas:10,  court:'m',        plur:'m'},
+  temps:  {lab:'Temps · s',     pas:5,   court:'s',        plur:'s'},
+  repos:  {lab:'Repos · s',     pas:15,  court:'s repos',  plur:'s repos'}
+};
+const CLES_CHAMPS = Object.keys(CHAMPS);
+
+/* Le type d'un exercice ne restreint plus la saisie : il ne sert qu'à
+   colorer les champs les plus pertinents et à choisir un pas par défaut. */
+const MISE_EN_AVANT = {
+  reps:       ['series','reps','charge'],
+  carry:      ['series','dist','charge'],
+  cardio:     ['temps','charge','distkm'],
+  fractionne: ['series','temps','repos']
+};
+function enAvant(e, k){
+  const l = MISE_EN_AVANT[e && e.type] || MISE_EN_AVANT.reps;
+  return l.indexOf(k) >= 0;
+}
+function libelleChamp(k, e){
+  if(k==='charge') return 'Charge · ' + (e && e.unite ? e.unite : 'kg');
+  return CHAMPS[k].lab;
+}
+function pasChamp(k, e){
+  if(k==='charge') return (e && e.pas) || 2.5;
+  return CHAMPS[k].pas;
+}
 
 function saisieVide(e, materiel){
-  const s = {series:0, reps:0, charge:0, temps:0, repos:0, materiel:(materiel===undefined?null:materiel)};
+  const s = {materiel:(materiel===undefined?null:materiel)};
+  CLES_CHAMPS.forEach(function(k){ s[k]=0; });
   CLES_MESURES.forEach(function(k){ s[k]=0; });
+  if(e && e.type==='fractionne') s.echauf = 0;
   return s;
 }
 function copieLigne(src){
-  const o = {series:+src.series||0, reps:+src.reps||0, charge:+src.charge||0,
-             temps:+src.temps||0, repos:+src.repos||0, materiel:src.materiel||null};
+  src = src || {};
+  const o = {materiel:src.materiel||null};
+  CLES_CHAMPS.forEach(function(k){ o[k] = +src[k]||0; });
   CLES_MESURES.forEach(function(k){ o[k] = +src[k]||0; });
+  if(+src.echauf) o.echauf = +src.echauf;
   return o;
 }
 const tous = () => EXOS.concat(S.perso);
 const exo = id => tous().find(e=>e.id===id);
 
-/* Migration silencieuse : une séance enregistrée avant l'introduction des
-   charges multiples avait {exId,series,reps,charge} à plat. On l'enveloppe
-   dans un tableau lignes:[...] pour que l'historique déjà écrit ne bouge pas. */
+const SCHEMA = 3;
+
+/* Migration silencieuse, jouée une seule fois grâce à S.v.
+
+   v1 → v2 : une séance enregistrée avant l'introduction des charges
+   multiples avait {exId,series,reps,charge} à plat. On l'enveloppe dans
+   un tableau lignes:[...] pour que l'historique déjà écrit ne bouge pas.
+
+   v2 → v3 : fin du détournement du champ « reps ». Il servait à ranger
+   les mètres d'un porté, les minutes d'un cardio, la durée de montée
+   d'un fractionné — trois grandeurs différentes dans la même case, ce
+   qui faussait le tonnage et empêchait de noter de vraies répétitions.
+   Chaque grandeur reçoit désormais son propre champ. L'ancienne mesure
+   machine « dist » (en km) est renommée « distkm » pour libérer le nom
+   au profit de la distance universelle en mètres.
+
+   Les valeurs saisies ne sont jamais perdues : elles changent de case. */
 function migrer(){
   Object.keys(S.jours).forEach(function(d){
     S.jours[d] = (S.jours[d]||[]).map(function(x){
       if(x && x.lignes) return x;
       return {exId:x.exId, lignes:[{series:+x.series||3, reps:+x.reps||0, charge:+x.charge||0, materiel:x.materiel||null}]};
+    });
+  });
+
+  if((+S.v||0) < 3){
+    Object.keys(S.jours).forEach(function(d){
+      (S.jours[d]||[]).forEach(function(entry){
+        const e = exo(entry.exId);
+        const t = (e && e.type) || 'reps';
+        (entry.lignes||[]).forEach(function(li){
+          /* la mesure machine change de nom avant tout le reste */
+          if(t!=='carry' && li.dist!==undefined && li.distkm===undefined){
+            li.distkm = +li.dist||0; delete li.dist;
+          }
+          if(t==='carry'){
+            if(li.dist===undefined) li.dist = +li.reps||0;   /* les mètres quittent reps */
+            li.reps = 0;
+          } else if(t==='cardio'){
+            if(!(+li.temps)) li.temps = Math.round((+li.reps||0)*60); /* minutes → secondes */
+            li.reps = 0;
+          } else if(t==='fractionne'){
+            if(!(+li.temps))  li.temps  = +li.reps||0;       /* montée en secondes */
+            if(!(+li.echauf)) li.echauf = +li.charge||0;     /* échauffement en minutes */
+            li.reps = 0; li.charge = 0;
+          }
+        });
+      });
+    });
+  }
+  S.v = SCHEMA;
+
+  /* Toute ligne repart avec le jeu de clés complet : plus aucune valeur
+     indéfinie ne circule dans les calculs ni dans l'affichage. */
+  Object.keys(S.jours).forEach(function(d){
+    (S.jours[d]||[]).forEach(function(entry){
+      entry.lignes = (Array.isArray(entry.lignes) ? entry.lignes : []).map(copieLigne);
     });
   });
 }
@@ -1124,10 +1235,21 @@ function reinitUI(){
   UI.corbeille = null; masquerUndo();
 }
 
+/* UI.pret ne passe à true qu'une fois la lecture du stock réellement
+   aboutie. Tant qu'il est faux, plus rien ne réécrit le stockage : un
+   carnet illisible sur un chargement raté reste sur le disque au lieu
+   d'être écrasé par un état vide. */
 async function charger(){
   if(!window.storage){ UI.stock=false; normaliserEtat(); return; }
-  try{ const r = await window.storage.get(KEY); if(r && r.value) S = Object.assign(S, JSON.parse(r.value)); }
-  catch(e){}
+  try{
+    const r = await window.storage.get(KEY);
+    if(r && r.value) S = Object.assign(S, JSON.parse(r.value));
+    UI.pret = true;
+  }
+  catch(e){
+    UI.stock = false;
+    toast('Carnet illisible : rien ne sera écrasé');
+  }
   normaliserEtat();
 }
 let tSave=null;
@@ -1140,6 +1262,7 @@ function sauver(){
   purgerVides();
   invaliderIndex();
   if(!window.storage){ UI.stock=false; return; }
+  if(!UI.pret) return;   /* carnet illisible : on ne réécrit rien par-dessus */
   clearTimeout(tSave);
   tSave = setTimeout(async()=>{
     try{ await window.storage.set(KEY, JSON.stringify(S)); }
@@ -1150,16 +1273,22 @@ async function sauverMaintenant(){
   purgerVides();
   invaliderIndex();
   if(!window.storage){ toast('Stockage indisponible'); return; }
+  if(!UI.pret){ toast('Carnet illisible : sauvegarde bloquée par sécurité'); return; }
   clearTimeout(tSave);
   try{ await window.storage.set(KEY, JSON.stringify(S)); toast('Séance sauvegardée'); }
   catch(e){ UI.stock=false; toast('Sauvegarde impossible'); }
 }
 
 const f = n => (Math.round((+n||0)*100)/100).toString().replace('.',',');
+const cap = s => String(s).charAt(0).toUpperCase()+String(s).slice(1);
 const esc = s => String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const JOURS=['dimanche','lundi','mardi','mercredi','jeudi','vendredi','samedi'];
 const MOIS=['janvier','février','mars','avril','mai','juin','juillet','août','septembre','octobre','novembre','décembre'];
 const iso = d => d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');
+const estDate = s => typeof s==='string' && /^\d{4}-\d{2}-\d{2}$/.test(s);
+/* Recalculé à chaque appel : une app laissée ouverte pendant la nuit
+   ne doit pas continuer à croire qu'on est la veille. */
+const aujourdhui = () => iso(new Date());
 function longue(s){ const d=new Date(s+'T12:00:00'); return JOURS[d.getDay()]+' '+d.getDate()+' '+MOIS[d.getMonth()]; }
 function courte(s){ const d=new Date(s+'T12:00:00'); return d.getDate()+' '+MOIS[d.getMonth()].slice(0,4)+'.'; }
 function ilYA(s){
@@ -1168,10 +1297,17 @@ function ilYA(s){
   if(j<14) return 'il y a 1 semaine'; if(j<60) return 'il y a '+Math.round(j/7)+' semaines';
   return 'il y a '+Math.round(j/30)+' mois';
 }
+/* Déplacer une séance : les exercices changent de date, ils ne sont
+   jamais recopiés. La date d'origine disparaît, la destination reçoit
+   tout — c'est la seule opération de l'application qui modifie la date
+   d'une séance déjà enregistrée. */
 function deplacerSeance(old, neuve){
-  if(!neuve || !/^\d{4}-\d{2}-\d{2}$/.test(neuve)){ toast('Date invalide'); return; }
+  if(!estDate(neuve)){ toast('Date invalide'); return; }
   if(neuve===old){ UI.editDate=null; render(); return; }
-  const src = S.jours[old]; if(!src) return;
+  const src = S.jours[old]; if(!src || !src.length){ UI.editDate=null; render(); return; }
+  if((S.terminees||[]).indexOf(neuve)>=0){
+    toast('La séance du '+courte(neuve)+' est scellée — rouvre-la d’abord'); return;
+  }
   if(S.jours[neuve] && S.jours[neuve].length){
     if(!confirm('Une séance existe déjà le '+courte(neuve)+'. Fusionner les deux séances sur cette date ?')) return;
     src.forEach(function(entry){
@@ -1190,7 +1326,8 @@ function deplacerSeance(old, neuve){
   if(UI.ouvert[old]){ delete UI.ouvert[old]; UI.ouvert[neuve]=true; }
   if(UI.date===old){ UI.date = neuve; UI.saisie = {}; UI.edit = null; UI.panneau = {}; }
   UI.editDate = null;
-  sauver(); invaliderIndex(); render(); toast('Date corrigée');
+  sauver(); invaliderIndex(); render();
+  toast('Séance déplacée au '+courte(neuve));
 }
 function scrollY(){ const n=document.getElementById('scrollarea'); return n? n.scrollTop : 0; }
 let _tUndo=null, _tq=null;
@@ -1209,18 +1346,39 @@ function toast(m){ const t=document.getElementById('toast'); t.textContent=m; t.
 function buzz(m){ if(navigator.vibrate) try{navigator.vibrate(m)}catch(e){} }
 
 const datesTriees = () => Object.keys(S.jours).filter(d=>S.jours[d] && S.jours[d].length).sort().reverse();
+
+/* Lecture et écriture sont volontairement séparées.
+
+   `lecture` ne crée jamais rien : tout l'affichage passe par elle, si
+   bien qu'ouvrir un onglet ou changer de date ne peut plus faire
+   apparaître une séance fantôme sur une date où l'on n'a rien saisi.
+
+   `ligneJour` est le seul point d'écriture. Il refuse une date invalide
+   au lieu de retomber en silence sur aujourd'hui : c'était la porte par
+   laquelle une saisie destinée à mercredi finissait datée de dimanche. */
+const lecture = date => (estDate(date) && S.jours[date]) ? S.jours[date] : [];
 function ligneJour(date){
-  /* jamais de clé parasite, et jamais d'écriture perdue : une date
-     invalide retombe sur aujourd'hui plutôt que sur un tableau jetable */
-  if(!date || !/^\d{4}-\d{2}-\d{2}$/.test(date)) date = iso(new Date());
+  if(!estDate(date)) return null;
   if(!S.jours[date]) S.jours[date]=[];
   return S.jours[date];
 }
+/* Date d'écriture courante, toujours validée avant usage. */
+function dateActive(){
+  if(!estDate(UI.date)) UI.date = aujourdhui();
+  return UI.date;
+}
+/* Tonnage = séries × répétitions × charge. Une charge portée sans
+   répétition (un farmer walk, un gainage lesté) compte une fois par
+   série : auparavant les mètres logés dans `reps` étaient pris pour des
+   répétitions et multipliaient le tonnage par trente. Sur un cardio la
+   « charge » note une vitesse ou un niveau de résistance, sur un
+   fractionné un échauffement : ni l'une ni l'autre n'est un poids. */
 function tonnageLigne(li, ex){
-  if(ex && ex.type==='cardio') return 0;
+  const t = (ex && ex.type) || 'reps';
+  if(t==='cardio' || t==='fractionne') return 0;
   const s = +li.series||0, r = +li.reps||0, c = +li.charge||0;
   if(!c || !s) return 0;
-  return r ? s*r*c : s*c;
+  return s * (r>0 ? r : 1) * c;
 }
 function cumul(entry){
   const ex = exo(entry.exId);
@@ -1253,6 +1411,7 @@ function indexHisto(){
       const top = entry.lignes.reduce((a,b)=> (+b.charge>+a.charge ? b : a));
       (idx[entry.exId] = idx[entry.exId] || []).push({
         date:d, charge:+top.charge||0, reps:+top.reps||0,
+        dist:+top.dist||0, temps:+top.temps||0,
         series:cumul(entry).series, lignes:entry.lignes});
     });
   });
@@ -1274,7 +1433,7 @@ function render(){
   const nbJ = datesTriees().length;
   document.getElementById('hSub').textContent =
     UI.vue==='exos'  ? tous().length+' mouvements'
-  : UI.vue==='jour'  ? longue(UI.date)
+  : UI.vue==='jour'  ? longue(dateActive())+(dateActive()===aujourdhui()?'':' · '+ilYA(dateActive()))
   : UI.vue==='histo' ? nbJ+' séance'+(nbJ>1?'s':'')
   : (UI.vueCharges==='volume' ? 'Charge totale soulevée' : 'Progression par exercice');
 
@@ -1329,7 +1488,7 @@ function vExos(){
   const catalogue = axe==='type' ? GROUPES : MUSCLES;
   const champGroupe = axe==='type' ? 'g' : 'muscle';
   const q = UI.q || '';
-  const dej = ligneJour(UI.date).map(x=>x.exId);
+  const dej = lecture(dateActive()).map(x=>x.exId);
 
   let h = '<div class="seg">'+
     '<button class="chip '+(axe==='type'?'on':'')+'" data-action="axe" data-id="type">Par type</button>'+
@@ -1384,29 +1543,99 @@ function vExos(){
 }
 
 /* ─── 2. SÉANCE DU JOUR ─── */
-function uniteVal(e){ return e.type==='carry' ? 'm' : e.type==='cardio' ? 'min' : e.type==='fractionne' ? 'répétitions' : 'reps'; }
-function labelVal(e){ return e.type==='carry' ? 'Distance · m' : e.type==='cardio' ? 'Durée · min' : e.type==='fractionne' ? 'Montée · s' : 'Reps'; }
-function pasVal(e){ return e.type==='carry' ? 10 : e.type==='cardio' ? 5 : e.type==='fractionne' ? 30 : 1; }
+
+/* Une seule fonction décrit une ligne, quel que soit l'exercice : elle
+   énumère les valeurs réellement renseignées et ignore les autres. Plus
+   besoin de savoir si l'exercice est un porté ou un cardio pour
+   l'afficher — c'est ce qui rend l'ensemble universel. */
+function resumeLigne(li, e, avecCharge){
+  const p = [];
+  const s=+li.series||0, r=+li.reps||0, d=+li.dist||0, t=+li.temps||0, ro=+li.repos||0;
+  if(s) p.push(f(s)+' × ');
+  if(r) p.push(f(r)+' reps');
+  if(d) p.push(f(d)+' m');
+  if(t) p.push(f(t)+' s');
+  /* « 3 × » seul n'a pas de sens : on recolle le multiplicateur */
+  let txt = p.length>1 && p[0].slice(-3)===' × '
+    ? p[0]+p.slice(1).join(' · ')
+    : p.join(' · ').replace(' × ', ' série'+(s>1?'s':''));
+  /* la charge se lit juste après le volume — « 3 × 30 m à 20 kg » */
+  if(avecCharge && +li.charge) txt += (txt?' à ':'')+f(li.charge)+' '+esc(e.unite);
+  const suf = [];
+  if(li.materiel && MATLABEL[li.materiel]) suf.push(MATLABEL[li.materiel]);
+  if(+li.echauf) suf.push('échauff. '+f(li.echauf)+' min');
+  if(ro) suf.push(f(ro)+' s repos');
+  if(suf.length) txt += (txt?' · ':'')+suf.join(' · ');
+  const mes = [];
+  CLES_MESURES.forEach(function(k){
+    const v = +li[k]||0; if(v) mes.push(f(v)+(UNI_MES[k]||''));
+  });
+  return {detail: txt || '—', mes: mes.join(' · ')};
+}
+/* Valeur mise en gros sur la ligne : la charge si elle existe, sinon la
+   grandeur qui porte l'effort. */
+function teteLigne(li, e){
+  if(+li.charge) return f(li.charge)+' '+esc(e.unite);
+  if(+li.dist)   return f(li.dist)+' m';
+  if(+li.reps)   return f(li.reps)+' reps';
+  if(+li.temps)  return f(li.temps)+' s';
+  if(+li.series) return f(li.series)+' série'+(+li.series>1?'s':'');
+  return '—';
+}
 function recordCharge(exId){
   const h = histo(exId); if(!h.length) return 0;
   return Math.max.apply(null, h.map(x=>x.charge));
 }
 
 function vJour(){
-  const entries = ligneJour(UI.date);
-  const scellee = (S.terminees||[]).indexOf(UI.date)>=0;
-  let h = '<div class="spread" style="margin-bottom:12px">'+
-    '<input type="date" value="'+UI.date+'" data-action="date" style="width:auto;padding:8px 11px;font-size:14px">'+
-    '<div class="row" style="gap:7px">'+
-    (entries.length && !scellee ? '<button class="btn sm ghost" style="width:auto;padding:9px 12px" data-action="nouvelle-seance">Nouvelle séance</button>' : '')+
+  const date = dateActive();
+  const entries = lecture(date);
+  const scellee = (S.terminees||[]).indexOf(date)>=0;
+  const auj = date === aujourdhui();
+
+  let h = '';
+
+  /* Rappel permanent et impossible à manquer quand on n'écrit pas sur
+     la date du jour. C'est la garantie visuelle qu'une correction de la
+     séance de mercredi reste bien sur mercredi. */
+  if(!auj){
+    h += '<div class="datebar"><div style="flex:1;min-width:0">'+
+      '<strong>'+cap(longue(date))+'</strong>'+
+      '<div class="tiny">'+ilYA(date)+' — tout ce que tu ajoutes ici reste sur cette date.</div>'+
+      '</div><button data-action="aller-aujourdhui">Aujourd’hui</button></div>';
+  }
+
+  h += '<div class="spread" style="margin-bottom:11px">'+
+    '<label class="datepick"><span class="tiny">Séance du</span>'+
+      '<input type="date" value="'+date+'" data-action="date"></label>'+
     (scellee ? '' : '<button class="btn sm ghost" style="width:auto;padding:9px 14px" data-action="ajouter-sheet">+ Exercice</button>')+
-    '</div></div>';
+    '</div>';
+
+  /* Déplacer la séance est une action distincte de « aller à une date » :
+     les deux sont nommées, aucune ne se déclenche à la place de l'autre. */
+  if(entries.length){
+    if(UI.editDate===date){
+      h += '<div class="deplacer"><div class="eyebrow" style="margin-bottom:6px">Déplacer cette séance</div>'+
+        '<p class="tiny" style="margin-bottom:9px">Les '+entries.length+' exercice'+(entries.length>1?'s':'')+
+          ' du '+courte(date)+' changent de date. Rien n’est dupliqué.</p>'+
+        '<div class="row" style="gap:8px">'+
+          '<input type="date" id="editDateInput" value="'+date+'" style="flex:1">'+
+          '<button class="btn sm" style="width:auto;padding:9px 14px" data-action="valider-date-seance" data-id="'+date+'">Déplacer</button>'+
+          '<button class="btn sm ghost" style="width:auto;padding:9px 10px" data-action="annuler-edit-date">Annuler</button>'+
+        '</div></div>';
+    } else if(!scellee){
+      h += '<div class="row" style="gap:7px;margin-bottom:12px;flex-wrap:wrap">'+
+        '<button class="btn sm ghost" style="width:auto;padding:8px 12px" data-action="editer-date-seance" data-id="'+date+'">✎ Corriger la date</button>'+
+        '<button class="btn sm ghost" style="width:auto;padding:8px 12px" data-action="nouvelle-seance">Vider la séance</button>'+
+        '</div>';
+    }
+  }
 
   if(scellee){
     return h + '<div class="empty"><div class="big">Séance scellée</div>'+
-      '<p class="muted">La séance du '+courte(UI.date)+' est terminée et protégée contre les modifications. Consulte-la dans l\u2019Historique, ou choisis une autre date ci-dessus pour en composer une nouvelle.</p>'+
-      '<button class="btn ghost sm" style="margin-top:14px" data-action="aller-historique-jour" data-id="'+UI.date+'">Voir dans l\u2019Historique</button>'+
-      '<button class="btn ghost sm" style="margin-top:8px" data-action="desceller-seance" data-id="'+UI.date+'">Rouvrir cette séance</button></div>';
+      '<p class="muted">La séance du '+courte(date)+' est terminée et protégée contre les modifications. Consulte-la dans l’Historique, ou choisis une autre date ci-dessus pour en composer une nouvelle.</p>'+
+      '<button class="btn ghost sm" style="margin-top:14px" data-action="aller-historique-jour" data-id="'+date+'">Voir dans l’Historique</button>'+
+      '<button class="btn ghost sm" style="margin-top:8px" data-action="desceller-seance" data-id="'+date+'">Rouvrir cette séance</button></div>';
   }
 
   if(!entries.length){
@@ -1425,27 +1654,23 @@ function vJour(){
           '<button class="pen" data-action="suppr-modele" data-i="'+i+'" aria-label="Supprimer la routine">×</button></div>';
       });
     }
-    const ds = datesTriees();
+    const ds = datesTriees().filter(d=>d!==date);
     if(ds.length){
-      const d0 = ds[0];
-      vide += '<button class="btn ghost sm" style="margin-top:12px" data-action="reprendre" data-id="'+d0+'">'+
-        'Reprendre la séance du '+courte(d0)+'</button>';
+      vide += '<button class="btn ghost sm" style="margin-top:12px" data-action="copier-ici" data-id="'+ds[0]+'">'+
+        'Reprendre les exercices du '+courte(ds[0])+'</button>';
     }
     return vide;
   }
 
   entries.forEach(function(entry){
     const e = exo(entry.exId); if(!e) return;
-    const carry = e.type==='carry', cardio = e.type==='cardio', frac = e.type==='fractionne';
-    const mats = (cardio||frac) ? [] : (e.materiels && e.materiels.length ? e.materiels : Object.keys(MATLABEL));
     const enEdition = UI.edit && UI.edit.exId===entry.exId ? UI.edit.li : -1;
 
     if(!UI.saisie[entry.exId]){
       /* le matériel suit la dernière charge posée, sinon le défaut de l'exercice */
       const derLi = entry.lignes.length ? entry.lignes[entry.lignes.length-1] : null;
-      const matDef = (cardio||frac) ? null
-        : (derLi && derLi.materiel) ? derLi.materiel
-        : (e.materiels && e.materiels.length ? e.materiels[0] : 'barre');
+      const matDef = (derLi && derLi.materiel) ? derLi.materiel
+        : (e.materiels && e.materiels.length ? e.materiels[0] : null);
       UI.saisie[entry.exId] = saisieVide(e, matDef);
       /* la pente et le niveau se reconduisent d'une série à l'autre */
       if(derLi && e.machine) e.machine.forEach(function(k){
@@ -1465,30 +1690,12 @@ function vJour(){
     if(entry.lignes.length){
       h += '<div style="margin:11px 0 2px">';
       entry.lignes.forEach(function(li,li_i){
-        const extras = [];
-        if(!frac){
-          if(+li.temps) extras.push(f(li.temps)+' s tenue');
-          if(+li.repos) extras.push(f(li.repos)+' s repos');
-        }
-        const tete = frac
-          ? f(li.series)+' × '+f(li.reps)+' s'
-          : f(li.charge)+' '+esc(e.unite);
-        const mes = [];
-        if(e.machine) e.machine.forEach(function(k){
-          const v = +li[k]||0; if(!v) return;
-          const u = {pente:' %', dist:' km', vmoy:' km/h', deniv:' m D+', kcal:' kcal'}[k] || '';
-          mes.push(f(v)+u);
-        });
-        const detail = (frac
-          ? 'Échauffement '+f(li.charge)+' min · Récup '+f(li.repos)+' s'
-          : f(li.series)+' × '+f(li.reps)+' '+uniteVal(e)+
-            (li.materiel? ' · '+esc(MATLABEL[li.materiel]) : '')+
-            (extras.length? ' · '+extras.join(' · ') : ''))+
-          (mes.length? '<br><span style="color:var(--steel)">'+mes.join(' · ')+'</span>' : '');
-        h += '<div class="charge-row'+(carry?' carry':'')+(li_i===enEdition?' edit':'')+'">'+
+        const r = resumeLigne(li, e);
+        h += '<div class="charge-row'+(+li.charge?'':' mesure')+(li_i===enEdition?' edit':'')+'">'+
           '<button style="flex:1;min-width:0;text-align:left" data-action="editer-ligne" data-id="'+entry.exId+'" data-li="'+li_i+'">'+
-            '<span class="cr-charge">'+tete+'</span>'+
-            '<div class="cr-detail">'+detail+'</div></button>'+
+            '<span class="cr-charge">'+teteLigne(li,e)+'</span>'+
+            '<div class="cr-detail">'+r.detail+
+              (r.mes? '<br><span style="color:var(--steel)">'+r.mes+'</span>' : '')+'</div></button>'+
           '<button class="pen" data-action="dupliquer-ligne" data-id="'+entry.exId+'" data-li="'+li_i+'" aria-label="Dupliquer cette charge">⧉</button>'+
           '<button class="pen" data-action="editer-ligne" data-id="'+entry.exId+'" data-li="'+li_i+'" aria-label="Modifier cette charge">✎</button>'+
           '<button class="x" data-action="suppr-ligne" data-id="'+entry.exId+'" data-li="'+li_i+'" aria-label="Retirer cette charge">×</button>'+
@@ -1502,53 +1709,43 @@ function vJour(){
         '<button data-action="annuler-edition">Annuler</button></div>';
     }
 
-    const ouvertPanneau = enEdition>=0 || !!UI.panneau[entry.exId];
-
-    if(!ouvertPanneau){
+    if(!(enEdition>=0 || UI.panneau[entry.exId])){
       h += '<button class="btn line-add" data-action="toggle-panneau" data-id="'+entry.exId+'">+ Ajouter une série</button></div>';
       return;
     }
 
-    if(mats.length){
-      h += '<div class="chips" style="padding-top:9px">';
-      mats.forEach(function(m){
-        h += '<button class="chip '+(s.materiel===m?'on':'')+'" data-action="materiel" data-id="'+entry.exId+'" data-m="'+m+'">'+MATLABEL[m]+'</button>';
+    /* ── Le panneau universel ──────────────────────────────
+       Les mêmes six variables et le même choix de matériel sur tous les
+       exercices, sans exception. Les champs les plus pertinents pour le
+       mouvement sont simplement mis en avant ; tous restent saisissables. */
+    h += '<div class="chips wrap" style="padding-top:9px">';
+    MATS.forEach(function(m){
+      h += '<button class="chip '+(s.materiel===m?'on':'')+'" data-action="materiel" data-id="'+entry.exId+'" data-m="'+m+'">'+MATLABEL[m]+'</button>';
+    });
+    h += '</div>';
+
+    const rangee = function(cles){
+      let r = '<div class="fields" style="margin-top:7px">';
+      cles.forEach(function(k){
+        r += champ(entry.exId, k, libelleChamp(k,e), s[k]||0, pasChamp(k,e), enAvant(e,k)?'steel':'');
       });
-      h += '</div>';
+      return r + '</div>';
+    };
+    h += rangee(['series','reps','charge']) + rangee(['dist','temps','repos']);
+
+    if(e.type==='fractionne'){
+      h += '<div class="fields" style="grid-template-columns:1fr;margin-top:7px">'+
+        champ(entry.exId,'echauf','Échauffement · min', s.echauf||0, 1, '')+'</div>';
     }
 
-    if(frac){
-      h += '<div class="fields">'+
-          champ(entry.exId,'series','Répétitions', s.series, 1, '')+
-          champ(entry.exId,'reps', 'Montée · s', s.reps, 30, 'steel')+
-          champ(entry.exId,'charge', 'Échauffement · min', s.charge, 1, '')+
-        '</div>'+
-        '<div class="fields" style="grid-template-columns:1fr;margin-top:7px">'+
-          champ(entry.exId,'repos','Récupération · s', s.repos, 30, '')+
-        '</div>'+
-        blocMachine(e, s)+
-        '<button class="btn line-add" style="margin-top:11px;background:var(--steel-soft);color:var(--steel);border-color:var(--steel)" data-action="lancer-fractionne" data-id="'+entry.exId+'">'+
-          '▶ Démarrer le compteur en direct</button>'+
-        '<button class="btn line-add" data-action="'+(enEdition>=0?'valider-edition':'ajouter-ligne')+'" data-id="'+entry.exId+'" style="margin-top:7px">'+
-          (enEdition>=0? '✓ Enregistrer la modification' : '+ Enregistrer sans le compteur')+'</button>'+
-        (enEdition<0? '<button class="btn ghost sm" style="margin-top:7px" data-action="toggle-panneau" data-id="'+entry.exId+'">Réduire</button>' : '')+
-        '</div>';
-      return;
+    h += blocMachine(e, s);
+
+    if(e.type==='fractionne'){
+      h += '<button class="btn line-add" style="margin-top:11px;background:var(--steel-soft);color:var(--steel);border-color:var(--steel)" data-action="lancer-fractionne" data-id="'+entry.exId+'">'+
+        '▶ Démarrer le compteur en direct</button>';
     }
 
-    h += '<div class="fields">'+
-        champ(entry.exId,'series','Séries',s.series,1,'')+
-        champ(entry.exId,'reps', labelVal(e), s.reps, pasVal(e), (carry||cardio)?'steel':'')+
-        champ(entry.exId,'charge','Charge · '+e.unite, s.charge, e.pas, '')+
-      '</div>'+
-      (cardio
-        ? '<div class="fields" style="grid-template-columns:1fr;margin-top:7px">'+
-            champ(entry.exId,'repos','Repos · s', s.repos, 30, '')+'</div>'
-        : '<div class="fields" style="grid-template-columns:1fr 1fr;margin-top:7px">'+
-            champ(entry.exId,'temps','Tenue · s', s.temps, 5, '')+
-            champ(entry.exId,'repos','Repos · s', s.repos, 15, '')+'</div>')+
-      blocMachine(e, s)+
-      '<button class="btn line-add" style="margin-top:11px" data-action="'+(enEdition>=0?'valider-edition':'ajouter-ligne')+'" data-id="'+entry.exId+'">'+
+    h += '<button class="btn line-add" style="margin-top:'+(e.type==='fractionne'?'7':'11')+'px" data-action="'+(enEdition>=0?'valider-edition':'ajouter-ligne')+'" data-id="'+entry.exId+'">'+
         (enEdition>=0? '✓ Enregistrer la modification' : '+ Ajouter cette charge à la séance')+'</button>'+
       (enEdition<0? '<button class="btn ghost sm" style="margin-top:7px" data-action="toggle-panneau" data-id="'+entry.exId+'">Réduire</button>' : '')+
       '</div>';
@@ -1607,7 +1804,7 @@ function vHisto(){
   d30.forEach(function(x){
     (S.jours[x]||[]).forEach(function(en){
       const ex = exo(en.exId); if(!ex || !ex.machine) return;
-      (en.lignes||[]).forEach(function(li){ km30 += +li.dist||0; dp30 += +li.deniv||0; });
+      (en.lignes||[]).forEach(function(li){ km30 += +li.distkm||0; dp30 += +li.deniv||0; });
     });
   });
   let serie = 0;
@@ -1653,33 +1850,27 @@ function vHisto(){
       }
       l.forEach(function(x){
         const e = exo(x.exId); if(!e || !x.lignes || !x.lignes.length) return;
-        const carry = e.type==='carry';
         h += '<div class="line" style="align-items:flex-start">'+
           '<span class="tile" style="width:38px;height:38px;border-radius:9px;flex:none">'+pic(e.pic,28)+'</span>'+
           '<span style="flex:1;min-width:0">'+
             '<span style="display:block;font-size:14.5px;margin-bottom:1px">'+esc(e.nom)+'</span>'+
             x.lignes.map(function(li){
-              const extras = [];
-              if(+li.temps) extras.push(f(li.temps)+' s tenue');
-              if(+li.repos) extras.push(f(li.repos)+' s repos');
-              const mes = [];
-              if(e.machine) e.machine.forEach(function(k){
-                const v = +li[k]||0; if(!v) return;
-                const u = {pente:' %', dist:' km', vmoy:' km/h', deniv:' m D+', kcal:' kcal'}[k] || '';
-                mes.push(f(v)+u);
-              });
-              return '<span class="tiny" style="display:block">'+f(li.series)+' × '+f(li.reps)+' '+uniteVal(e)+
-                ' à '+f(li.charge)+' '+esc(e.unite)+(li.materiel?' · '+esc(MATLABEL[li.materiel]):'')+
-                (extras.length?' · '+extras.join(' · '):'')+
-                (mes.length?' <span style="color:var(--steel)">· '+mes.join(' · ')+'</span>':'')+'</span>';
+              const r = resumeLigne(li, e, true);
+              return '<span class="tiny" style="display:block">'+r.detail+
+                (r.mes?' <span style="color:var(--steel)">· '+r.mes+'</span>':'')+'</span>';
             }).join('')+
           '</span></div>';
       });
-      h += '<div class="row" style="margin-top:12px;flex-wrap:wrap">'+
-        '<button class="btn sm ghost" data-action="reprendre" data-id="'+d+'">Reprendre cette séance</button>'+
+      /* Corriger la séance est l'action principale, et elle est nommée :
+         c'est elle qui ouvre la bonne date, sans rien recopier ailleurs. */
+      if(!scelleeJ){
+        h += '<button class="btn sm" style="margin-top:12px;background:var(--steel-soft);color:var(--steel);border:1px solid var(--steel)" data-action="modifier-seance" data-id="'+d+'">✎ Modifier cette séance</button>';
+      }
+      h += '<div class="row" style="margin-top:8px;flex-wrap:wrap;gap:7px">'+
+        '<button class="btn sm ghost" style="width:auto;padding:9px 13px" data-action="refaire" data-id="'+d+'">Refaire…</button>'+
         (scelleeJ
-          ? '<button class="btn sm ghost" data-action="desceller-seance" data-id="'+d+'">Rouvrir</button>'
-          : '<button class="btn sm" style="background:var(--gold-soft);color:var(--gold);border-color:var(--gold);border-width:1px;border-style:solid" data-action="sceller-seance" data-id="'+d+'">✓ Séance terminée</button>')+
+          ? '<button class="btn sm ghost" style="width:auto;padding:9px 13px" data-action="desceller-seance" data-id="'+d+'">Rouvrir</button>'
+          : '<button class="btn sm" style="width:auto;padding:9px 13px;background:var(--gold-soft);color:var(--gold);border:1px solid var(--gold)" data-action="sceller-seance" data-id="'+d+'">✓ Terminée</button>')+
         '<button class="btn sm danger" style="width:auto;padding:9px 13px" data-action="suppr-jour" data-id="'+d+'">Supprimer</button>'+
       '</div></div>';
     }
@@ -1761,7 +1952,10 @@ function vParExercice(){
     const pr = x.charge===rec.charge;
     h += '<div class="line"><span style="flex:1;min-width:0">'+
       '<span style="display:block;font-size:14.5px;text-transform:capitalize">'+longue(x.date)+'</span>'+
-      '<span class="tiny">'+f(x.series)+' séries × '+f(x.reps)+' '+uniteVal(e)+'</span></span>'+
+      '<span class="tiny">'+f(x.series)+' série'+(x.series>1?'s':'')+
+        (x.reps? ' × '+f(x.reps)+' reps':'')+
+        (x.dist? ' · '+f(x.dist)+' m':'')+
+        (x.temps? ' · '+f(x.temps)+' s':'')+'</span></span>'+
       '<span class="n" style="'+(pr?'':'color:var(--chalk)')+'">'+f(x.charge)+(pr?' ★':'')+'</span></div>';
   });
   h += '</div>';
@@ -1795,7 +1989,12 @@ function courbeVolume(pts){
 }
 
 function courbe(H){
-  let pts = H.map(x=>({d:x.date, y:x.charge, r:x.reps}));
+  /* L'étiquette au-dessus du point rappelle le volume de la séance :
+     des répétitions quand il y en a, sinon la distance ou la durée. */
+  const etiq = x => x.reps ? '×'+f(x.reps)
+    : x.dist ? f(x.dist)+' m'
+    : x.temps ? f(x.temps)+' s' : '';
+  let pts = H.map(x=>({d:x.date, y:x.charge, r:etiq(x)}));
   if(pts.length===1) pts = [pts[0], pts[0]];
   const W=320, Ht=150, pl=32, pr=12, pt=18, pb=24;
   const ys = pts.map(p=>p.y);
@@ -1815,7 +2014,7 @@ function courbe(H){
   s += '<path d="'+d+'" fill="none" stroke="#B8720E" stroke-width="2.4" stroke-linejoin="round" stroke-linecap="round"/>';
   pts.forEach(function(p,i){
     s += '<circle cx="'+X(i)+'" cy="'+Y(p.y)+'" r="3.6" fill="#FFFFFF" stroke="#B8720E" stroke-width="2.2"/>';
-    if(pts.length<=8) s += '<text x="'+X(i)+'" y="'+(Y(p.y)-9)+'" text-anchor="middle" font-size="9.5" fill="#5B6672" font-family="Barlow">×'+f(p.r)+'</text>';
+    if(pts.length<=8 && p.r) s += '<text x="'+X(i)+'" y="'+(Y(p.y)-9)+'" text-anchor="middle" font-size="9.5" fill="#5B6672" font-family="Barlow">'+p.r+'</text>';
   });
   s += '<text x="'+X(0)+'" y="'+(Ht-5)+'" font-size="9.5" fill="#5B6672" font-family="Barlow">'+courte(pts[0].d)+'</text>';
   if(pts.length>1) s += '<text x="'+(W-pr)+'" y="'+(Ht-5)+'" text-anchor="end" font-size="9.5" fill="#5B6672" font-family="Barlow">'+courte(pts[pts.length-1].d)+'</text>';
@@ -1848,10 +2047,10 @@ function mmss(sec){
 }
 function ouvrirFractionne(exId){
   const s = UI.saisie[exId]; if(!s) return;
-  const montee = Math.round(+s.reps||0);
-  if(montee<=0){ toast('Indique la durée de la montée'); return; }
+  const montee = Math.round(+s.temps||0);
+  if(montee<=0){ toast('Indique la durée de la montée dans « Temps · s »'); return; }
   const total = Math.max(1, Math.round(+s.series||0));
-  const echauffement = Math.max(0, Math.round((+s.charge||0)*60));
+  const echauffement = Math.max(0, Math.round((+s.echauf||0)*60));
   const recup = Math.max(0, Math.round(+s.repos||0));
   FRAC = {exId:exId, total:total, montee:montee, recup:recup, echauffement:echauffement,
           phase: echauffement>0 ? 'echauffement' : 'montee',
@@ -1942,7 +2141,7 @@ function sheetFiche(id){
 }
 
 function sheetPicker(){
-  const dej = ligneJour(UI.date).map(x=>x.exId);
+  const dej = lecture(dateActive()).map(x=>x.exId);
   const q = UI.qp || '';
   let c = '<div class="search"><span class="ico">⌕</span>'+
     '<input id="qPick" placeholder="Rechercher…" value="'+esc(q)+'" data-action="recherche-pick" autocomplete="off">'+
@@ -1978,6 +2177,25 @@ function sheetPicker(){
   ouvrir('Ajouter à la séance', c);
 }
 
+/* Refaire une séance : la destination est saisie explicitement. Par
+   défaut seuls les exercices sont repris, pas les charges — recopier
+   les charges d'une ancienne séance à l'identique est un choix, pas
+   une valeur par défaut. */
+function sheetRefaire(src){
+  const l = S.jours[src] || [];
+  const noms = l.map(x=>exo(x.exId)).filter(Boolean).map(e=>e.nom).join(' · ');
+  ouvrir('Refaire cette séance',
+    '<p class="muted">Reprend les exercices du '+longue(src)+' sur une autre date. '+
+      'La séance d’origine n’est pas touchée.</p>'+
+    '<p class="tiny" style="margin:8px 0 16px">'+esc(noms)+'</p>'+
+    '<div class="eyebrow" style="margin-bottom:5px">Date de la nouvelle séance</div>'+
+    '<input type="date" id="refaireDate" value="'+aujourdhui()+'" style="margin-bottom:12px">'+
+    '<label class="row" style="gap:8px;font-size:14px;margin-bottom:16px">'+
+      '<input type="checkbox" id="refaireCharges" style="width:auto"> '+
+      'Copier aussi les charges déjà saisies</label>'+
+    '<button class="btn primary" data-action="refaire-go" data-id="'+src+'">Créer la séance</button>');
+}
+
 function sheetNouvel(){
   let opts = '', optsMus = '';
   Object.keys(GROUPES).forEach(g=>{ opts += '<option value="'+g+'">'+GROUPES[g].nom+'</option>'; });
@@ -1989,20 +2207,17 @@ function sheetNouvel(){
       '<div><div class="eyebrow" style="margin-bottom:5px">Type</div><select id="nx-g">'+opts+'</select></div>'+
       '<div><div class="eyebrow" style="margin-bottom:5px">Muscle</div><select id="nx-mus-g">'+optsMus+'</select></div></div>'+
     '<div class="grid2" style="margin-bottom:11px">'+
-      '<div><div class="eyebrow" style="margin-bottom:5px">Type de saisie</div><select id="nx-type"><option value="reps">Répétitions</option><option value="carry">Porté (distance)</option><option value="cardio">Cardio (durée)</option></select></div>'+
+      '<div><div class="eyebrow" style="margin-bottom:5px">Accent de saisie</div><select id="nx-type"><option value="reps">Répétitions</option><option value="carry">Porté (distance)</option><option value="cardio">Cardio (durée)</option><option value="fractionne">Fractionné (compteur)</option></select></div>'+
       '<div><div class="eyebrow" style="margin-bottom:5px">Unité</div><input id="nx-unite" value="kg"></div></div>'+
     '<div class="grid2" style="margin-bottom:11px">'+
       '<div><div class="eyebrow" style="margin-bottom:5px">Format visé</div><input id="nx-cible" value="3 × 5–8"></div>'+
       '<div><div class="eyebrow" style="margin-bottom:5px">Charge de départ</div><input id="nx-charge" inputmode="decimal" value="20"></div></div>'+
     '<div style="margin-bottom:14px"><div class="eyebrow" style="margin-bottom:5px">Ce que ça travaille</div><input id="nx-mus" placeholder="Dos, biceps…"></div>'+
     '<div class="sep" style="margin:0 0 14px"></div>'+
-    '<div class="eyebrow" style="margin-bottom:7px">Matériel proposé à chaque séance</div>'+
-    '<p class="tiny" style="margin-bottom:9px">Coche les options que tu veux pouvoir choisir en loguant — utile pour un porté que tu fais tantôt à l’haltère, tantôt au disque ou au kettlebell.</p>'+
+    '<div class="eyebrow" style="margin-bottom:7px">Matériel proposé en premier</div>'+
+    '<p class="tiny" style="margin-bottom:9px">Coche celui que tu prends le plus souvent : il sera présélectionné. Tous les matériels restent proposés à la saisie, quoi qu’il arrive.</p>'+
     '<div class="row" style="gap:14px;margin-bottom:16px;flex-wrap:wrap">'+
-      '<label class="row" style="gap:6px;font-size:14px"><input type="checkbox" id="nx-mat-haltere" style="width:auto"> Haltère</label>'+
-      '<label class="row" style="gap:6px;font-size:14px"><input type="checkbox" id="nx-mat-disque" style="width:auto"> Disque</label>'+
-      '<label class="row" style="gap:6px;font-size:14px"><input type="checkbox" id="nx-mat-kettlebell" style="width:auto"> Kettlebell</label>'+
-      '<label class="row" style="gap:6px;font-size:14px"><input type="checkbox" id="nx-mat-barre" style="width:auto"> Barre</label>'+
+      MATS.map(m=>'<label class="row" style="gap:6px;font-size:14px"><input type="checkbox" id="nx-mat-'+m+'" style="width:auto"> '+MATLABEL[m]+'</label>').join('')+
     '</div>'+
     '<div class="sep" style="margin:0 0 14px"></div>'+
     '<div class="eyebrow" style="margin-bottom:7px">Dessine le pictogramme</div>'+
@@ -2042,7 +2257,7 @@ function apercuPerso(){
 
 function sheetReglages(){
   const ds = datesTriees();
-  const totS = ds.reduce((a,d)=>a+S.jours[d].reduce((b,x)=>b+(+x.series||0),0),0);
+  const totS = ds.reduce((a,d)=>a+cumulJour(S.jours[d]).series,0);
   ouvrir('Réglages',
     '<div class="grid2" style="margin-bottom:16px">'+
       '<div class="stat"><div class="n">'+ds.length+'</div><div class="l">séances</div></div>'+
@@ -2069,14 +2284,15 @@ function csvEchappe(v){
   return v;
 }
 function versCSV(){
-  const rows = [['Date','Exercice','Groupe','Séries','Répétitions','Charge','Unité','Matériel','Temps (s)','Repos (s)']
+  const rows = [['Date','Exercice','Groupe','Séries','Reps','Charge','Unité','Matériel',
+                 'Distance (m)','Temps (s)','Repos (s)','Échauffement (min)']
     .concat(CLES_MESURES.map(k=>MESURES[k].col))];
   datesTriees().slice().reverse().forEach(function(d){
     S.jours[d].forEach(function(x){
       const e = exo(x.exId); if(!e || !x.lignes) return;
       x.lignes.forEach(function(li){
         rows.push([d, e.nom, (GROUPES[e.g]?GROUPES[e.g].nom:e.g), li.series, li.reps, li.charge, e.unite,
-          (li.materiel?MATLABEL[li.materiel]:''), (li.temps||''), (li.repos||'')]
+          (li.materiel?MATLABEL[li.materiel]:''), (li.dist||''), (li.temps||''), (li.repos||''), (li.echauf||'')]
           .concat(CLES_MESURES.map(k=>(+li[k]||'') )));
       });
     });
@@ -2106,11 +2322,23 @@ function depuisCSV(text){
 function importerLignesCSV(rows){
   if(!rows.length) return {importees:0, ignorees:0, erreur:'vide'};
   const entete = rows[0].map(h=>h.trim().toLowerCase());
-  const iDate = entete.indexOf('date'), iNom = entete.indexOf('exercice'),
-        iSeries = entete.indexOf('séries'), iReps = entete.indexOf('répétitions'),
-        iCharge = entete.indexOf('charge'), iMat = entete.indexOf('matériel'),
-        iTemps = entete.indexOf('temps (s)'), iRepos = entete.indexOf('repos (s)');
-  const iMes = {}; CLES_MESURES.forEach(function(k){ iMes[k] = entete.indexOf(MESURES[k].col.toLowerCase()); });
+  const col = function(){ /* premier en-tête reconnu parmi les alias donnés */
+    for(let i=0;i<arguments.length;i++){ const j = entete.indexOf(arguments[i]); if(j>=0) return j; }
+    return -1;
+  };
+  const iDate = col('date'), iNom = col('exercice'),
+        iSeries = col('séries'), iReps = col('reps','répétitions'),
+        iCharge = col('charge'), iMat = col('matériel'),
+        iDist = col('distance (m)'), iTemps = col('temps (s)'), iRepos = col('repos (s)'),
+        iEchauf = col('échauffement (min)');
+  const iMes = {};
+  CLES_MESURES.forEach(function(k){ iMes[k] = entete.indexOf(MESURES[k].col.toLowerCase()); });
+  /* un export d'avant la refonte nommait encore la distance machine « Distance (km) » */
+  if(iMes.distkm<0) iMes.distkm = entete.indexOf('distance (km)');
+  /* Sans colonne « Distance (m) », le fichier vient de l'ancien format :
+     ses répétitions cachent peut-être des mètres ou des minutes, et il
+     faut leur appliquer la même conversion que la migration interne. */
+  const ancien = iDist < 0;
   if(iDate<0 || iNom<0) return {importees:0, ignorees:rows.length-1, erreur:'entetes'};
   const matInverse = {}; Object.keys(MATLABEL).forEach(k=>matInverse[MATLABEL[k].toLowerCase()]=k);
   let importees=0, ignorees=0;
@@ -2121,21 +2349,25 @@ function importerLignesCSV(rows){
     const nom = (r[iNom]||'').trim();
     const ex = tous().find(e=>e.nom.toLowerCase()===nom.toLowerCase());
     if(!ex){ ignorees++; continue; }
-    const series = iSeries>=0 ? (parseFloat(String(r[iSeries]).replace(',','.'))||0) : 0;
-    const reps = iReps>=0 ? (parseFloat(String(r[iReps]).replace(',','.'))||0) : 0;
-    const charge = iCharge>=0 ? (parseFloat(String(r[iCharge]).replace(',','.'))||0) : 0;
-    const temps = iTemps>=0 ? (parseFloat(String(r[iTemps]).replace(',','.'))||0) : 0;
-    const repos = iRepos>=0 ? (parseFloat(String(r[iRepos]).replace(',','.'))||0) : 0;
+    const nb = i => i>=0 ? (parseFloat(String(r[i]).replace(',','.'))||0) : 0;
     const matTxt = iMat>=0 ? (r[iMat]||'').trim().toLowerCase() : '';
     const materiel = matTxt ? (matInverse[matTxt]||null) : null;
-    const jour = ligneJour(date);
+    const jour = ligneJour(date); if(!jour){ ignorees++; continue; }
     let entry = jour.find(x=>x.exId===ex.id);
     if(!entry){ entry = {exId:ex.id, lignes:[]}; jour.push(entry); }
-    const nl = {series:series, reps:reps, charge:charge, materiel:materiel, temps:temps, repos:repos};
-    CLES_MESURES.forEach(function(k){
-      nl[k] = iMes[k]>=0 ? (parseFloat(String(r[iMes[k]]).replace(',','.'))||0) : 0;
-    });
-    entry.lignes.push(nl);
+    const nl = {series:nb(iSeries), reps:nb(iReps), charge:nb(iCharge), materiel:materiel,
+                dist:nb(iDist), temps:nb(iTemps), repos:nb(iRepos), echauf:nb(iEchauf)};
+    CLES_MESURES.forEach(function(k){ nl[k] = nb(iMes[k]); });
+    if(ancien){
+      if(ex.type==='carry'){ nl.dist = nl.reps; nl.reps = 0; }
+      else if(ex.type==='cardio'){ if(!nl.temps) nl.temps = Math.round(nl.reps*60); nl.reps = 0; }
+      else if(ex.type==='fractionne'){
+        if(!nl.temps) nl.temps = nl.reps;
+        if(!nl.echauf) nl.echauf = nl.charge;
+        nl.reps = 0; nl.charge = 0;
+      }
+    }
+    entry.lignes.push(copieLigne(nl));
     importees++;
   }
   return {importees:importees, ignorees:ignorees};
@@ -2146,16 +2378,28 @@ function importerLignesCSV(rows){
    ═══════════════════════════════════════════════════════════ */
 function ajouter(id){
   const e = exo(id); if(!e) return;
-  if((S.terminees||[]).indexOf(UI.date)>=0){
-    toast('La séance du '+courte(UI.date)+' est scellée — rouvre-la depuis l’Historique pour la compléter');
+  const date = dateActive();
+  if((S.terminees||[]).indexOf(date)>=0){
+    toast('La séance du '+courte(date)+' est scellée — rouvre-la depuis l’Historique pour la compléter');
     fermer(); return;
   }
-  const l = ligneJour(UI.date);
+  const l = ligneJour(date); if(!l) return;
   if(l.some(x=>x.exId===id)){ UI.vue='jour'; fermer(); render(); return; }
   l.push({exId:id, lignes:[]});
-  UI.saisie[id] = saisieVide(e, (e.type==='cardio'||e.type==='fractionne') ? null
-    : (e.materiels? e.materiels[0] : 'barre'));
-  sauver(); buzz(10); UI.vue='jour'; fermer(); render(); toast(e.nom+' ajouté');
+  UI.saisie[id] = saisieVide(e, (e.materiels && e.materiels.length) ? e.materiels[0] : null);
+  sauver(); buzz(10); UI.vue='jour'; fermer(); render();
+  toast(e.nom+' ajouté'+(date===aujourdhui() ? '' : ' au '+courte(date)));
+}
+
+/* Une saisie est valable dès qu'une seule valeur est renseignée. On ne
+   dicte plus à l'utilisateur ce qu'un exercice a le droit de mesurer :
+   séries seules, distance seule, temps sous charge, tout est accepté. */
+function validerSaisie(s){
+  const rempli = ['reps','charge','dist','temps','repos'].some(k=>(+s[k]||0)>0)
+    || CLES_MESURES.some(k=>(+s[k]||0)>0) || (+s.echauf||0)>0;
+  if(!rempli){ toast('Renseigne au moins une valeur'); return false; }
+  if((+s.series||0)<=0) s.series = 1;
+  return true;
 }
 
 document.addEventListener('click', function(ev){
@@ -2190,14 +2434,14 @@ document.addEventListener('click', function(ev){
     case 'annuler-suppr': {
       if(!UI.corbeille) break;
       const cb = UI.corbeille;
-      const jour = ligneJour(cb.date);
+      const jour = ligneJour(cb.date); if(!jour) break;
       let entry = jour.find(x=>x.exId===cb.exId);
       if(!entry){ entry = {exId:cb.exId, lignes:[]}; jour.splice(Math.min(cb.posEx, jour.length), 0, entry); }
       entry.lignes.splice(Math.min(cb.li, entry.lignes.length), 0, cb.ligne);
       UI.corbeille = null; masquerUndo();
       sauver(); buzz(8); render(); toast('Charge restaurée'); break; }
     case 'dupliquer-ligne': {
-      const entry = ligneJour(UI.date).find(x=>x.exId===id); if(!entry) break;
+      const entry = (ligneJour(dateActive())||[]).find(x=>x.exId===id); if(!entry) break;
       const src = entry.lignes[+el.dataset.li]; if(!src) break;
       entry.lignes.splice(+el.dataset.li+1, 0, copieLigne(src));
       sauver(); buzz(10); UI._y = scrollY(); render(); toast('Charge dupliquée'); break; }
@@ -2221,16 +2465,10 @@ document.addEventListener('click', function(ev){
       break; }
 
     case 'ajouter-ligne': {
-      const entry = ligneJour(UI.date).find(x=>x.exId===id); if(!entry) break;
+      const entry = (ligneJour(dateActive())||[]).find(x=>x.exId===id); if(!entry) break;
       const s = UI.saisie[id]; if(!s) break;
       const exA = exo(id);
-      if(exA && exA.type==='cardio'){
-        if((+s.reps||0)<=0 && (+s.temps||0)<=0){ toast('Indique une durée'); break; }
-        if((+s.series||0)<=0) s.series = 1;
-      } else {
-        if((+s.series||0)<=0){ toast('Indique au moins une série'); break; }
-        if((+s.reps||0)<=0 && (+s.temps||0)<=0){ toast('Indique des répétitions ou une durée tenue'); break; }
-      }
+      if(!validerSaisie(s)) break;
       entry.lignes.push(copieLigne(s));
       const reset = saisieVide(exA, s.materiel);
       if(exA && exA.machine) exA.machine.forEach(function(k){
@@ -2242,7 +2480,7 @@ document.addEventListener('click', function(ev){
       break; }
 
     case 'editer-ligne': {
-      const entry = ligneJour(UI.date).find(x=>x.exId===id); if(!entry) break;
+      const entry = (ligneJour(dateActive())||[]).find(x=>x.exId===id); if(!entry) break;
       const li_i = +el.dataset.li;
       const li = entry.lignes[li_i]; if(!li) break;
       if(UI.edit && UI.edit.exId===id && UI.edit.li===li_i){
@@ -2256,16 +2494,10 @@ document.addEventListener('click', function(ev){
       break; }
 
     case 'valider-edition': {
-      const entry = ligneJour(UI.date).find(x=>x.exId===id); if(!entry) break;
+      const entry = (ligneJour(dateActive())||[]).find(x=>x.exId===id); if(!entry) break;
       const s = UI.saisie[id]; if(!s || !UI.edit) break;
       const exV = exo(id);
-      if(exV && exV.type==='cardio'){
-        if((+s.reps||0)<=0 && (+s.temps||0)<=0){ toast('Indique une durée'); break; }
-        if((+s.series||0)<=0) s.series = 1;
-      } else {
-        if((+s.series||0)<=0){ toast('Indique au moins une série'); break; }
-        if((+s.reps||0)<=0 && (+s.temps||0)<=0){ toast('Indique des répétitions ou une durée tenue'); break; }
-      }
+      if(!validerSaisie(s)) break;
       entry.lignes[UI.edit.li] = copieLigne(s);
       UI.edit = null;
       UI.panneau[id] = false;
@@ -2281,10 +2513,10 @@ document.addEventListener('click', function(ev){
       break; }
 
     case 'suppr-ligne': {
-      const arr = ligneJour(UI.date);
+      const arr = ligneJour(dateActive()); if(!arr) break;
       const entry = arr.find(x=>x.exId===id); if(!entry) break;
       const li_i = +el.dataset.li;
-      UI.corbeille = {date:UI.date, exId:id, li:li_i, posEx:arr.indexOf(entry),
+      UI.corbeille = {date:dateActive(), exId:id, li:li_i, posEx:arr.indexOf(entry),
                       ligne:copieLigne(entry.lignes[li_i])};
       afficherUndo('Charge supprimée');
       entry.lignes.splice(li_i, 1);
@@ -2297,7 +2529,7 @@ document.addEventListener('click', function(ev){
       sauver(); UI._y = scrollY(); render(); break; }
 
     case 'retirer-exo': {
-      const arr = ligneJour(UI.date);
+      const arr = ligneJour(dateActive()); if(!arr) break;
       const idx = arr.findIndex(x=>x.exId===id);
       if(idx>=0) arr.splice(idx,1);
       delete UI.saisie[id]; delete UI.panneau[id];
@@ -2308,20 +2540,57 @@ document.addEventListener('click', function(ev){
     case 'suppr-jour':
       if(confirm('Supprimer la séance du '+longue(id)+' ?')){ delete S.jours[id]; sauver(); render(); }
       break;
-    case 'reprendre': {
-      const cible = iso(new Date());
-      if((S.terminees||[]).indexOf(cible)>=0){
-        toast('La séance d’aujourd’hui est scellée — rouvre-la depuis l’Historique avant de la compléter');
-        break;
-      }
-      const src = S.jours[id].slice();
-      UI.date = cible; reinitUI();
-      const l = ligneJour(UI.date);
-      src.forEach(function(x){
-        if(!l.some(y=>y.exId===x.exId)) l.push({exId:x.exId, lignes:x.lignes.map(copieLigne)});
-      });
-      sauver(); UI.vue='jour'; render(); toast('Séance reprise pour aujourd’hui');
+    /* Ouvrir une séance passée pour la corriger : on va SUR sa date.
+       Rien n'est copié, rien n'est créé sur la date du jour — c'était
+       tout le problème de l'ancien « Reprendre », qui recopiait la
+       séance de mercredi sur dimanche dès qu'on voulait la retoucher. */
+    case 'modifier-seance': {
+      if(!estDate(id)) break;
+      UI.date = id; reinitUI(); UI.vue = 'jour';
+      fermer(); render();
+      toast('Séance du '+courte(id)+' ouverte');
       break; }
+
+    /* Refaire une séance ailleurs : la date de destination est demandée
+       explicitement, jamais devinée. */
+    case 'refaire': sheetRefaire(id); break;
+    case 'refaire-go': {
+      const inp = document.getElementById('refaireDate');
+      const cible = inp ? inp.value : '';
+      if(!estDate(cible)){ toast('Date invalide'); break; }
+      if((S.terminees||[]).indexOf(cible)>=0){
+        toast('La séance du '+courte(cible)+' est scellée — rouvre-la avant de la compléter'); break;
+      }
+      const avecCharges = !!(document.getElementById('refaireCharges')||{}).checked;
+      const src = (S.jours[id]||[]).slice();
+      const l = ligneJour(cible); if(!l) break;
+      let n = 0;
+      src.forEach(function(x){
+        if(l.some(y=>y.exId===x.exId)) return;
+        l.push({exId:x.exId, lignes: avecCharges ? x.lignes.map(copieLigne) : []});
+        n++;
+      });
+      UI.date = cible; reinitUI(); UI.vue = 'jour';
+      sauver(); fermer(); render();
+      toast(n ? n+' exercice'+(n>1?'s':'')+' sur le '+courte(cible) : 'Rien à ajouter');
+      break; }
+
+    /* Reprendre les exercices d'une séance sur la date déjà ouverte. */
+    case 'copier-ici': {
+      const cible = dateActive();
+      const l = ligneJour(cible); if(!l) break;
+      let n = 0;
+      (S.jours[id]||[]).forEach(function(x){
+        if(l.some(y=>y.exId===x.exId)) return;
+        l.push({exId:x.exId, lignes:[]});
+        n++;
+      });
+      reinitUI(); sauver(); UI.vue='jour'; render();
+      toast(n+' exercice'+(n>1?'s':'')+' repris sur le '+courte(cible));
+      break; }
+
+    case 'aller-aujourdhui':
+      UI.date = aujourdhui(); reinitUI(); UI.vue='jour'; render(); break;
 
     case 'ex-charge': UI.exCharge = id; render(); break;
     case 'vue-charges': UI.vueCharges = id; render(); break;
@@ -2330,8 +2599,8 @@ document.addEventListener('click', function(ev){
       UI.panneau[id] = !UI.panneau[id];
       UI._y = scrollY(); render(); break;
     case 'nouvelle-seance':
-      if(confirm('Vider toute la séance du '+courte(UI.date)+' ? Cette action ne peut pas être annulée.')){
-        S.jours[UI.date] = [];
+      if(confirm('Vider toute la séance du '+courte(dateActive())+' ? Cette action ne peut pas être annulée.')){
+        S.jours[dateActive()] = [];
         reinitUI();
         sauver(); invaliderIndex(); render(); toast('Séance vidée');
       } break;
@@ -2363,11 +2632,11 @@ document.addEventListener('click', function(ev){
     case 'frac-fermer': clearInterval(_fracTimer); FRAC=null; fermer(); break;
     case 'frac-enregistrer': {
       if(!FRAC) break;
-      const entry = ligneJour(UI.date).find(x=>x.exId===FRAC.exId);
+      const entry = (ligneJour(dateActive())||[]).find(x=>x.exId===FRAC.exId);
       if(entry){
         const lf = saisieVide(exo(FRAC.exId), null);
-        lf.series = FRAC.total; lf.reps = FRAC.montee;
-        lf.charge = Math.round(FRAC.echauffement/6)/10; lf.repos = FRAC.recup;
+        lf.series = FRAC.total; lf.temps = FRAC.montee; lf.repos = FRAC.recup;
+        lf.echauf = Math.round(FRAC.echauffement/6)/10;
         const sf = UI.saisie[FRAC.exId];
         if(sf) CLES_MESURES.forEach(function(k){ lf[k] = +sf[k]||0; });
         entry.lignes.push(lf);
@@ -2377,7 +2646,7 @@ document.addEventListener('click', function(ev){
       UI._y = scrollY(); render();
       break; }
     case 'creer-modele': {
-      const entries = ligneJour(UI.date);
+      const entries = lecture(dateActive());
       if(!entries.length){ toast('La séance est vide'); break; }
       const nom = prompt('Nom de la routine', 'Séance ' + ((S.modeles||[]).length+1));
       if(nom===null) break;
@@ -2386,7 +2655,7 @@ document.addEventListener('click', function(ev){
       sauver(); toast('Routine enregistrée'); render(); break; }
     case 'charger-modele': {
       const m = (S.modeles||[])[+el.dataset.i]; if(!m) break;
-      const jour = ligneJour(UI.date);
+      const jour = ligneJour(dateActive()); if(!jour) break;
       m.exIds.forEach(function(exId){
         if(!exo(exId)) return;
         if(!jour.some(x=>x.exId===exId)) jour.push({exId:exId, lignes:[]});
@@ -2402,7 +2671,7 @@ document.addEventListener('click', function(ev){
       const nom = g('nx-nom').trim(); if(!nom){ toast('Il manque le nom'); break; }
       const type = g('nx-type');
       const mats = [];
-      ['haltere','disque','kettlebell','barre'].forEach(function(m){
+      MATS.forEach(function(m){
         const cb = document.getElementById('nx-mat-'+m); if(cb && cb.checked) mats.push(m);
       });
       const id = 'p'+Date.now().toString(36);
@@ -2473,7 +2742,13 @@ document.addEventListener('input', function(ev){
 
 document.addEventListener('change', function(ev){
   const t = ev.target;
-  if(t.dataset && t.dataset.action==='date'){ UI.date = t.value || iso(new Date()); reinitUI(); render(); }
+  if(t.dataset && t.dataset.action==='date'){
+    /* Ce sélecteur navigue, il ne déplace pas la séance : changer de date
+       ici ouvre la séance de cette date-là et laisse l'autre où elle est.
+       Déplacer se fait par « Corriger la date de cette séance ». */
+    UI.date = estDate(t.value) ? t.value : aujourdhui();
+    reinitUI(); render();
+  }
   if(t.dataset && t.dataset.action==='maj-apercu'){ apercuPerso(); }
   if(t.id==='fimport'){
     const file = t.files[0]; if(!file) return;
@@ -2508,14 +2783,14 @@ document.addEventListener('change', function(ev){
 (async function(){
   app.innerHTML = '<div class="empty"><div class="big">Carnet de fonte</div><p class="muted">Ouverture…</p></div>';
   await charger();
-  UI.date = iso(new Date());
+  UI.date = aujourdhui();
   const ds = datesTriees();
   if(ds.length) UI.ouvert[ds[0]] = true;
   render();
 })();
 
 window.addEventListener('beforeunload', function(){
-  if(window.storage) try{ window.storage.set(KEY, JSON.stringify(S)); }catch(e){}
+  if(window.storage && UI.pret) try{ window.storage.set(KEY, JSON.stringify(S)); }catch(e){}
 });
 </script>
 </body>
